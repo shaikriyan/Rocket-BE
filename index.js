@@ -4,7 +4,6 @@ import { configDotenv } from 'dotenv';
 configDotenv();
 import OpenAI from 'openai';
 import readLineSync from 'readline-sync';
-import { JSDOM } from 'jsdom';
 
 
 
@@ -22,7 +21,7 @@ const tools = {
     "replicateContent" : replicateContent
 }
 
-/*
+
 async function replicateContent(path, cmd) {
     const url = `${process.env.AEM_DOMAIN}/bin/replicate.json`;
 
@@ -46,55 +45,6 @@ async function replicateContent(path, cmd) {
     }
 }
 
-// replicateContent('/content/aemgeeks/us/en/author', 'deactivate');
-// const status1 = await replicateContent('/content/aemgeeks/us/en/author', 'activate');
-// const status2 = await replicateContent('/content/aemgeeks/us/en/home1', 'activate');
-
-// console.log("status1 : ", status1);
-// console.log("status2 : ", status2);
-
-*/
-
-
-
-async function replicateContent(path, cmd) {
-    const url = `${process.env.AEM_DOMAIN}/bin/replicate.json`;
-
-
-    const form = new FormData();
-    form.append('path', path);
-    form.append('cmd', cmd);
-
-    try {
-        const response = await axios.post(url, form, {
-            headers: {
-                ...form.getHeaders(),
-                'Authorization': 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64')
-            }
-        });
-
-        // **Fix: Extract the status code from the HTML response**
-        const dom = new JSDOM(response.data);
-        const statusElement = dom.window.document.querySelector('#Status');
-
-        if (statusElement) {
-            const extractedStatus = statusElement.textContent.trim();
-            console.log(`Extracted Status: ${extractedStatus}`);
-            return extractedStatus; // Return extracted status
-        } else {
-            console.log("Status element not found. Returning default 200.");
-            return "200"; // Fallback if parsing fails
-        }
-
-    } catch (error) {
-        console.error('Error:', error.response ? error.response.data : error.message);
-        return error.response ? error.response.status.toString() : '500';
-    }
-}
-
-
-
-
 
 const SYSTEM_PROMPT = `
 
@@ -114,10 +64,10 @@ Example :
 START
 { "type": "user", "user" : "Can you publish/activate the following path : '/content/aemgeeks/us/en/author' and unpublish/deactivate this '/content/aemgeeks/us/en/home' ?  "}
 { "type": "plan", "plan" : "I will call the replicateContent for this path '/content/aemgeeks/us/en/author' with cmd as 'activate' "}
-{ "type": "action", "function" : "replicateContent", "input" : "/content/aemgeeks/us/en/author", "cmd" : 'activate'}
+{ "type": "action", "function" : "replicateContent", "path" : "/content/aemgeeks/us/en/author", "cmd" : 'activate'}
 { "type": "observation", "observation" : "200"}
 { "type": "plan", "plan" : "I will call the replicateContent for this path '/content/aemgeeks/us/en/home' with cmd as 'deactivate' "}
-{ "type": "action", "function" : "replicateContent", "input" : "/content/aemgeeks/us/en/home", "cmd" : 'deactivate'}
+{ "type": "action", "function" : "replicateContent", "path" : "/content/aemgeeks/us/en/home", "cmd" : 'deactivate'}
 { "type": "observation", "observation" : "200"}
 { "type": "output", "output" : "Success : 200, Both operation of Publishing & Unpublishing are done successfully"}
 
@@ -168,7 +118,7 @@ while(true){
         }
         else if(call.type == 'action'){
             const fn = tools[call.function]
-            const observation = await fn(call.input, call.cmd);
+            const observation = await fn(call.path, call.cmd);
             const obs = { "type": "observation", "observation" : observation}
             message.push({role : 'developer', content : JSON.stringify(obs)});
         }
