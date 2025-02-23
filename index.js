@@ -83,17 +83,63 @@ const message = [
 
 
 
-while(true){
+// while(true){
 
-    const query = readLineSync.question('>> ');
+//     const query = readLineSync.question('>> ');
 
+//     const q = {
+//         type : 'user',
+//         user : query
+//     }
+
+//     message.push({role : 'user', content : JSON.stringify(q)});
+
+//     while(true){
+//         const chat = await client.chat.completions.create({
+//             model : 'gpt-4o-mini',
+//             messages : message,
+//             response_format : {type : 'json_object'}
+//         })
+
+//         const result = chat.choices[0].message.content;
+
+//         console.log("\n\n--------------------------------------START AI --------------------------------------------------")
+//         console.log(result);
+//         console.log("--------------------------------------END AI --------------------------------------------------\n\n")
+
+
+//         message.push({role : 'assistant', content : result});
+
+//         const call = JSON.parse(result);
+
+//         if(call.type === 'output'){
+//             console.log(` BOT OUTPUT : ${call.output} `);
+//             break;
+//         }
+//         else if(call.type == 'action'){
+//             const fn = tools[call.function]
+//             const observation = await fn(call.path, call.cmd);
+//             const obs = { "type": "observation", "observation" : observation}
+//             message.push({role : 'developer', content : JSON.stringify(obs)});
+//         }
+
+
+//     }
+
+
+// }
+
+
+
+export const processQuery = async (query)=>{
+    console.log(`Processing your query....`);
     const q = {
         type : 'user',
         user : query
     }
 
     message.push({role : 'user', content : JSON.stringify(q)});
-
+    var outputResult = '';
     while(true){
         const chat = await client.chat.completions.create({
             model : 'gpt-4o-mini',
@@ -114,6 +160,7 @@ while(true){
 
         if(call.type === 'output'){
             console.log(` BOT OUTPUT : ${call.output} `);
+            outputResult = call.output;
             break;
         }
         else if(call.type == 'action'){
@@ -126,7 +173,6 @@ while(true){
 
     }
 
+    return outputResult;
 
-}
-
-
+};
