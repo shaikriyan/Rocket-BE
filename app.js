@@ -21,6 +21,7 @@ app.post('/process', async (req, resp)=>{
     try {
         
         const {query} = req.body;
+        console.log("query handler : ", query);
 
         if(!query){
             return  resp.status(200).json({

@@ -18,7 +18,27 @@ const client = new OpenAI({
 
 
 const tools = {
-    "replicateContent" : replicateContent
+    "replicateContent" : replicateContent,
+    "fetchAEMData" : fetchAEMData
+}
+
+
+async function fetchAEMData(path, selector = "model") {
+    const url = `${process.env.AEM_DOMAIN}${path}.${selector}.json`;
+    console.log("url : ", url);
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                Accept: "application/json",
+                Authorization: "Basic " + Buffer.from(`${username}:${password}`).toString("base64"),
+            },
+        });
+
+        return response.data; 
+    } catch (error) {
+        console.error("Error fetching data from AEM:", error.response ? error.response.data : error.message);
+        throw error;
+    }
 }
 
 
@@ -59,8 +79,13 @@ Available Tools:
 function replicateContent(path : string, cmd : string) : string
 replicateContent is a function that accepts path & cmd as input and return the statusCode of the as output.  
 
+function fetchAEMData(path : string, selector : string) : string
+The default value of selector is "model"
+fetchAEMData is a function that accepts path & selector as input and return the jsonData of that particular path as output.  
 
-Example : 
+
+
+Example1 : 
 START
 { "type": "user", "user" : "Can you publish/activate the following path : '/content/aemgeeks/us/en/author' and unpublish/deactivate this '/content/aemgeeks/us/en/home' ?  "}
 { "type": "plan", "plan" : "I will call the replicateContent for this path '/content/aemgeeks/us/en/author' with cmd as 'activate' "}
@@ -71,6 +96,14 @@ START
 { "type": "observation", "observation" : "200"}
 { "type": "output", "output" : "Success : 200, Both operation of Publishing & Unpublishing are done successfully"}
 
+
+Example2 : 
+START
+{ "type": "user", "user" : "Can you get the value of 'designPath' for this page path : '/content/we-retail/us/en/men'  "}
+{ "type": "plan", "plan" : "I will call the fetchAEMData for this path '/content/we-retail/us/en/men' with default selector as 'model' & iterate over the entire jsonData to fetch the value "}
+{ "type": "action", "function" : "replicateContent", "path" : "/content/we-retail/us/en/men", "selector" : 'model'}
+{ "type": "observation", "observation" : "/libs/settings/wcm/designs/default"}
+{ "type": "output", "output" : "The value of designPath is '/libs/settings/wcm/designs/default' "}
 
 
 `;
@@ -149,9 +182,9 @@ export const processQuery = async (query)=>{
 
         const result = chat.choices[0].message.content;
 
-        console.log("\n\n--------------------------------------START AI --------------------------------------------------")
+        console.log("\n\n-------------------------------------- Processing Initiated --------------------------------------------------")
         console.log(result);
-        console.log("--------------------------------------END AI --------------------------------------------------\n\n")
+        console.log("-------------------------------------- Processing Terminated --------------------------------------------------\n\n")
 
 
         message.push({role : 'assistant', content : result});
@@ -165,7 +198,11 @@ export const processQuery = async (query)=>{
         }
         else if(call.type == 'action'){
             const fn = tools[call.function]
-            const observation = await fn(call.path, call.cmd);
+            
+            var observation;
+            if(call.function === 'replicateContent') observation = await fn(call.path, call.cmd);
+            else if(call.function === 'fetchAEMData') observation = await fn(call.path, call.selector); 
+            
             const obs = { "type": "observation", "observation" : observation}
             message.push({role : 'developer', content : JSON.stringify(obs)});
         }
